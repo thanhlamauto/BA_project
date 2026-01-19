@@ -999,8 +999,32 @@ def get_control_recommendations(user_id, n=12, rated_movies=None):
 
     # Filter out already-rated movies
     if rated_movies:
-        rated_ids = set(int(mid) for mid in rated_movies.keys())
-        candidates = [m for m in all_movies if m['movieId'] not in rated_ids]
+        # Convert movie IDs to consistent type (handle both int and string)
+        rated_ids = set()
+        for mid in rated_movies.keys():
+            try:
+                rated_ids.add(int(mid))
+            except (ValueError, TypeError):
+                pass
+        
+        # Filter candidates (compare as int)
+        candidates = []
+        for m in all_movies:
+            movie_id = m.get('movieId')
+            # Handle both int and string movieId
+            try:
+                if isinstance(movie_id, str):
+                    movie_id = int(movie_id)
+                if movie_id not in rated_ids:
+                    candidates.append(m)
+            except (ValueError, TypeError):
+                # If conversion fails, include the movie
+                candidates.append(m)
+        
+        # If no candidates left (user rated everything), return random movies
+        if not candidates:
+            print(f"[Recommender] User {user_id} rated all movies, returning random")
+            return random.sample(all_movies, min(n, len(all_movies)))
 
         # Extract genre preferences
         genre_prefs = extract_genre_preferences(rated_movies)
@@ -1039,8 +1063,34 @@ def get_treatment_recommendations(user_id, n=12, rated_movies=None):
 
     # Filter out already-rated movies
     if rated_movies:
-        rated_ids = set(int(mid) for mid in rated_movies.keys())
-        candidates = [m for m in all_movies if m['movieId'] not in rated_ids]
+        # Convert movie IDs to consistent type (handle both int and string)
+        rated_ids = set()
+        for mid in rated_movies.keys():
+            try:
+                rated_ids.add(int(mid))
+            except (ValueError, TypeError):
+                pass
+        
+        # Filter candidates (compare as int)
+        candidates = []
+        for m in all_movies:
+            movie_id = m.get('movieId')
+            # Handle both int and string movieId
+            try:
+                if isinstance(movie_id, str):
+                    movie_id = int(movie_id)
+                if movie_id not in rated_ids:
+                    candidates.append(m)
+            except (ValueError, TypeError):
+                # If conversion fails, include the movie
+                candidates.append(m)
+        
+        # If no candidates left (user rated everything), return top rated movies
+        if not candidates:
+            print(f"[Recommender] User {user_id} rated all movies, returning top rated")
+            # Sort all movies by rating
+            sorted_movies = sorted(all_movies, key=lambda m: m.get('avg_rating', 0), reverse=True)
+            return sorted_movies[:n]
 
         # Extract genre preferences
         genre_prefs = extract_genre_preferences(rated_movies)
@@ -1060,10 +1110,16 @@ def get_treatment_recommendations(user_id, n=12, rated_movies=None):
         return result
     else:
         # No ratings yet - pure popularity
-        movies = dataset.movies.copy()
-        if 'avg_rating' in movies.columns:
-            movies = movies.sort_values('avg_rating', ascending=False)
-        return movies.head(n).to_dict('records')
+        if hasattr(dataset, 'movies') and hasattr(dataset.movies, 'columns'):
+            # Pandas DataFrame
+            movies = dataset.movies.copy()
+            if 'avg_rating' in movies.columns:
+                movies = movies.sort_values('avg_rating', ascending=False)
+            return movies.head(n).to_dict('records')
+        else:
+            # List of dicts (MongoDB)
+            sorted_movies = sorted(all_movies, key=lambda m: m.get('avg_rating', 0), reverse=True)
+            return sorted_movies[:n]
 
 
 def get_recommendations(user_id, variant, n=12, rated_movies=None):

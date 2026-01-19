@@ -101,12 +101,24 @@
             <div class="space-y-4">
                 <div>
                     <label for="userIdInput" class="block text-sm font-medium mb-2">User ID</label>
-                    <input
-                        type="text"
-                        id="userIdInput"
-                        class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:border-red-600 transition"
-                        placeholder="Enter your user ID (e.g., user123)"
-                    />
+                    <div class="flex gap-2">
+                        <input
+                            type="text"
+                            id="userIdInput"
+                            class="flex-1 px-4 py-3 bg-gray-800 border border-gray-700 rounded focus:outline-none focus:border-red-600 transition"
+                            placeholder="Enter user ID or click Random"
+                        />
+                        <button
+                            id="randomUserBtn"
+                            class="px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded font-medium transition whitespace-nowrap"
+                            title="Generate random user for A/B testing"
+                        >
+                            🎲 Random
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Tip: Use Random button to generate unique users for A/B testing
+                    </p>
                 </div>
 
                 <button
@@ -124,9 +136,15 @@
                 </button>
             </div>
 
-            <p class="text-xs text-gray-400 mt-4">
-                Note: You'll be randomly assigned to Control or Treatment variant for A/B testing.
-            </p>
+            <div class="mt-6 p-3 bg-gray-800 rounded text-xs">
+                <p class="text-gray-400 mb-2">
+                    <strong class="text-white">A/B Testing:</strong> You'll be randomly assigned to either:
+                </p>
+                <ul class="text-gray-400 space-y-1 ml-4">
+                    <li>• <span class="text-blue-400">Control</span> - Matrix Factorization algorithm</li>
+                    <li>• <span class="text-green-400">Treatment</span> - LightGCN algorithm</li>
+                </ul>
+            </div>
         </div>
     </div>
 
@@ -153,16 +171,34 @@
         const logoutBtn = document.getElementById('logoutBtn');
         const closeModalBtn = document.getElementById('closeModalBtn');
         const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+        const randomUserBtn = document.getElementById('randomUserBtn');
         const userIdInput = document.getElementById('userIdInput');
         const subscribeBtn = document.getElementById('subscribeBtn');
         const subscribedBadge = document.getElementById('subscribedBadge');
 
+        // Generate random unique user ID for A/B testing
+        function generateRandomUserId() {
+            const timestamp = Date.now();
+            const random = Math.floor(Math.random() * 10000);
+            return `user_${timestamp}_${random}`;
+        }
+
         loginBtn.addEventListener('click', () => {
             loginModal.classList.remove('hidden');
+            // Auto-generate user ID on modal open
+            if (!userIdInput.value) {
+                userIdInput.value = generateRandomUserId();
+            }
         });
 
         closeModalBtn.addEventListener('click', () => {
             loginModal.classList.add('hidden');
+        });
+
+        // Random user button
+        randomUserBtn.addEventListener('click', () => {
+            userIdInput.value = generateRandomUserId();
+            userIdInput.focus();
         });
 
         // Login submit
