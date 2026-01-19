@@ -1,5 +1,6 @@
 """
 Admin Routes - For Demo Data Generation & Management
+Supports both CSV and MongoDB backends
 """
 from flask import Blueprint, jsonify, request
 import os
@@ -15,6 +16,17 @@ from utils.ab_testing import assign_variant
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 LOG_DIR = Path('data/logs')
+
+# Check if MongoDB is enabled
+USE_MONGODB = os.getenv('USE_MONGODB_LOGGING', 'false').lower() == 'true'
+
+if USE_MONGODB:
+    try:
+        from utils.logger_service import log_impression, log_click, log_subscription, log_engagement
+        print("[Admin] Using MongoDB backend")
+    except ImportError:
+        print("[Admin] MongoDB import failed, falling back to CSV")
+        USE_MONGODB = False
 
 
 def generate_user_id(index):
@@ -96,16 +108,21 @@ def generate_demo_data():
             for _ in range(num_impressions):
                 # Generate random movie IDs (12 movies per impression)
                 movie_ids = random.sample(range(1, 121), 12)
-                movie_ids_str = ','.join(str(m) for m in movie_ids)
                 
-                impressions_data.append({
-                    'timestamp': timestamp.isoformat(),
-                    'user_id': user_id,
-                    'variant': variant,
-                    'movie_id': movie_ids_str,
-                    'rating': '',
-                    'metadata': ''
-                })
+                if USE_MONGODB:
+                    # MongoDB: log directly
+                    log_impression(user_id, variant, movie_ids)
+                else:
+                    # CSV: collect for batch write
+                    movie_ids_str = ','.join(str(m) for m in movie_ids)
+                    impressions_data.append({
+                        'timestamp': timestamp.isoformat(),
+                        'user_id': user_id,
+                        'variant': variant,
+                        'movie_id': movie_ids_str,
+                        'rating': '',
+                        'metadata': ''
+                    })
                 
                 stats[variant]['impressions'] += 1
                 timestamp += timedelta(minutes=random.randint(5, 30))
@@ -116,50 +133,65 @@ def generate_demo_data():
             for _ in range(num_clicks):
                 clicked_movie_id = random.randint(1, 120)
                 
-                clicks_data.append({
-                    'timestamp': timestamp.isoformat(),
-                    'user_id': user_id,
-                    'variant': variant,
-                    'movie_id': clicked_movie_id,
-                    'rating': '',
-                    'metadata': ''
-                })
+                if USE_MONGODB:
+                    # MongoDB: log directly
+                    log_click(user_id, variant, clicked_movie_id)
+                    
+                    # Add engagement event
+                    engagement_duration = random.randint(30, 300)
+                    log_engagement(user_id, variant, clicked_movie_id, 
+                                 metadata={'duration_seconds': engagement_duration})
+                else:
+                    # CSV: collect for batch write
+                    clicks_data.append({
+                        'timestamp': timestamp.isoformat(),
+                        'user_id': user_id,
+                        'variant': variant,
+                        'movie_id': clicked_movie_id,
+                        'rating': '',
+                        'metadata': ''
+                    })
+                    
+                    # Add engagement event
+                    engagement_duration = random.randint(30, 300)
+                    engagements_data.append({
+                        'timestamp': timestamp.isoformat(),
+                        'user_id': user_id,
+                        'variant': variant,
+                        'movie_id': clicked_movie_id,
+                        'rating': '',
+                        'metadata': f'{{"duration_seconds": {engagement_duration}}}'
+                    })
                 
                 stats[variant]['clicks'] += 1
-                
-                # Add engagement event
-                engagement_duration = random.randint(30, 300)
-                engagements_data.append({
-                    'timestamp': timestamp.isoformat(),
-                    'user_id': user_id,
-                    'variant': variant,
-                    'movie_id': clicked_movie_id,
-                    'rating': '',
-                    'metadata': f'{{"duration_seconds": {engagement_duration}}}'
-                })
-                
                 timestamp += timedelta(minutes=random.randint(1, 10))
             
             # User subscribes (CVR ~20-25% of users)
             if random.random() < 0.22:
-                subscriptions_data.append({
-                    'timestamp': timestamp.isoformat(),
-                    'user_id': user_id,
-                    'variant': variant,
-                    'movie_id': '',
-                    'rating': '',
-                    'metadata': ''
-                })
+                if USE_MONGODB:
+                    # MongoDB: log directly
+                    log_subscription(user_id, variant)
+                else:
+                    # CSV: collect for batch write
+                    subscriptions_data.append({
+                        'timestamp': timestamp.isoformat(),
+                        'user_id': user_id,
+                        'variant': variant,
+                        'movie_id': '',
+                        'rating': '',
+                        'metadata': ''
+                    })
                 
                 stats[variant]['subscriptions'] += 1
         
-        # Write data to CSV files
-        fieldnames = ['timestamp', 'user_id', 'variant', 'movie_id', 'rating', 'metadata']
-        
-        write_to_csv('impressions.csv', impressions_data, fieldnames)
-        write_to_csv('clicks.csv', clicks_data, fieldnames)
-        write_to_csv('subscriptions.csv', subscriptions_data, fieldnames)
-        write_to_csv('engagements.csv', engagements_data, fieldnames)
+        # Write to CSV if not using MongoDB
+        if not USE_MONGODB:
+            fieldnames = ['timestamp', 'user_id', 'variant', 'movie_id', 'rating', 'metadata']
+            
+            write_to_csv('impressions.csv', impressions_data, fieldnames)
+            write_to_csv('clicks.csv', clicks_data, fieldnames)
+            write_to_csv('subscriptions.csv', subscriptions_data, fieldnames)
+            write_to_csv('engagements.csv', engagements_data, fieldnames)
         
         # Calculate CTR/CVR
         for variant in ['control', 'treatment']:
@@ -176,12 +208,13 @@ def generate_demo_data():
         return jsonify({
             'success': True,
             'message': f'Generated demo data for {num_users} users',
+            'backend': 'MongoDB' if USE_MONGODB else 'CSV',
             'stats': stats,
-            'files_written': {
-                'impressions': len(impressions_data),
-                'clicks': len(clicks_data),
-                'subscriptions': len(subscriptions_data),
-                'engagements': len(engagements_data)
+            'events_written': {
+                'impressions': stats['control']['impressions'] + stats['treatment']['impressions'],
+                'clicks': stats['control']['clicks'] + stats['treatment']['clicks'],
+                'subscriptions': stats['control']['subscriptions'] + stats['treatment']['subscriptions'],
+                'engagements': stats['control']['clicks'] + stats['treatment']['clicks']  # Same as clicks
             }
         })
         
@@ -192,7 +225,7 @@ def generate_demo_data():
 @bp.route('/clear-demo-data', methods=['POST'])
 def clear_demo_data():
     """
-    Clear all demo data
+    Clear all demo data (MongoDB collections or CSV files)
     
     POST /admin/clear-demo-data
     Body: {
@@ -206,20 +239,47 @@ def clear_demo_data():
         return jsonify({'error': 'Invalid secret key'}), 403
     
     try:
-        deleted_files = []
-        
-        for filename in ['impressions.csv', 'clicks.csv', 'subscriptions.csv', 
-                        'conversions.csv', 'engagements.csv', 'performances.csv']:
-            filepath = LOG_DIR / filename
-            if filepath.exists():
-                filepath.unlink()
-                deleted_files.append(filename)
-        
-        return jsonify({
-            'success': True,
-            'message': f'Cleared {len(deleted_files)} files',
-            'deleted_files': deleted_files
-        })
+        if USE_MONGODB:
+            # Clear MongoDB collections
+            from pymongo import MongoClient
+            client = MongoClient(os.getenv('MONGODB_URI'))
+            db = client.get_database()
+            
+            cleared_collections = []
+            for collection_name in ['impressions', 'clicks', 'subscriptions', 
+                                   'conversions', 'engagements', 'performances', 'users']:
+                if collection_name in db.list_collection_names():
+                    result = db[collection_name].delete_many({})
+                    cleared_collections.append({
+                        'collection': collection_name,
+                        'deleted_count': result.deleted_count
+                    })
+            
+            client.close()
+            
+            return jsonify({
+                'success': True,
+                'backend': 'MongoDB',
+                'message': f'Cleared {len(cleared_collections)} collections',
+                'cleared': cleared_collections
+            })
+        else:
+            # Clear CSV files
+            deleted_files = []
+            
+            for filename in ['impressions.csv', 'clicks.csv', 'subscriptions.csv', 
+                            'conversions.csv', 'engagements.csv', 'performances.csv']:
+                filepath = LOG_DIR / filename
+                if filepath.exists():
+                    filepath.unlink()
+                    deleted_files.append(filename)
+            
+            return jsonify({
+                'success': True,
+                'backend': 'CSV',
+                'message': f'Cleared {len(deleted_files)} files',
+                'deleted_files': deleted_files
+            })
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -227,7 +287,7 @@ def clear_demo_data():
 
 @bp.route('/stats', methods=['GET'])
 def get_stats():
-    """Get current data statistics"""
+    """Get current data statistics (MongoDB or CSV)"""
     secret = request.args.get('secret')
     expected_secret = os.getenv('ADMIN_SECRET', 'demo_secret_2024')
     
@@ -237,20 +297,43 @@ def get_stats():
     try:
         stats = {}
         
-        for filename in ['impressions', 'clicks', 'subscriptions', 'engagements']:
-            filepath = LOG_DIR / f'{filename}.csv'
-            if filepath.exists():
-                with open(filepath, 'r') as f:
-                    # Count lines (subtract 1 for header)
-                    count = sum(1 for line in f) - 1
-                    stats[filename] = count
-            else:
-                stats[filename] = 0
-        
-        return jsonify({
-            'success': True,
-            'stats': stats
-        })
+        if USE_MONGODB:
+            # Get stats from MongoDB
+            from pymongo import MongoClient
+            client = MongoClient(os.getenv('MONGODB_URI'))
+            db = client.get_database()
+            
+            for collection_name in ['impressions', 'clicks', 'subscriptions', 
+                                   'engagements', 'users']:
+                if collection_name in db.list_collection_names():
+                    stats[collection_name] = db[collection_name].count_documents({})
+                else:
+                    stats[collection_name] = 0
+            
+            client.close()
+            
+            return jsonify({
+                'success': True,
+                'backend': 'MongoDB',
+                'stats': stats
+            })
+        else:
+            # Get stats from CSV files
+            for filename in ['impressions', 'clicks', 'subscriptions', 'engagements']:
+                filepath = LOG_DIR / f'{filename}.csv'
+                if filepath.exists():
+                    with open(filepath, 'r') as f:
+                        # Count lines (subtract 1 for header)
+                        count = sum(1 for line in f) - 1
+                        stats[filename] = count
+                else:
+                    stats[filename] = 0
+            
+            return jsonify({
+                'success': True,
+                'backend': 'CSV',
+                'stats': stats
+            })
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
