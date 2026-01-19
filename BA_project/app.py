@@ -10,7 +10,7 @@ from datetime import datetime
 import requests
 
 # Import routes
-from routes import main, analytics
+from routes import main, analytics, admin
 
 # Import performance middleware
 from utils.middleware import setup_middleware
@@ -29,6 +29,7 @@ app.config.from_object(config)
 # Register blueprints
 app.register_blueprint(main.bp)
 app.register_blueprint(analytics.bp)
+app.register_blueprint(admin.bp)
 
 # Setup performance monitoring middleware
 # Tracks API latency and adds X-Response-Time-Ms header
