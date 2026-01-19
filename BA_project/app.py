@@ -34,6 +34,13 @@ app.register_blueprint(analytics.bp)
 # Tracks API latency and adds X-Response-Time-Ms header
 setup_middleware(app)
 
+# Start Grafana Cloud metrics push (if configured)
+try:
+    from utils.grafana_metrics import start_metrics_push
+    start_metrics_push()
+except ImportError:
+    pass
+
 # Create necessary directories
 os.makedirs('data/logs', exist_ok=True)
 os.makedirs('static/images/posters', exist_ok=True)

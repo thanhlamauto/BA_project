@@ -1,33 +1,82 @@
 {
   "annotations": {
-    "list": []
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
   "links": [],
   "liveNow": false,
   "panels": [
     {
-      "gridPos": {"h": 4, "w": 24, "x": 0, "y": 0},
-      "id": 1,
+      "gridPos": {"h": 2, "w": 24, "x": 0, "y": 0},
+      "id": 100,
       "options": {
-        "content": "# A/B Test Dashboard - Movie Recommender\n\nMonitoring CTR, CVR, and user metrics for Control (Matrix Factorization) vs Treatment (LightGCN)",
+        "code": {"language": "plaintext", "showLineNumbers": false, "showMiniMap": false},
+        "content": "# 🎬 A/B Test Dashboard - Movie Recommender\n**Control**: Matrix Factorization | **Treatment**: LightGCN (Graph Neural Network)",
         "mode": "markdown"
       },
+      "pluginVersion": "10.2.0",
       "title": "",
+      "transparent": true,
       "type": "text"
     },
     {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
+          "color": {"mode": "thresholds"},
           "mappings": [],
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]},
+          "unit": "short"
         }
       },
-      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 4},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 2},
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "expr": "ba_ab_impressions_total{variant=\"control\"}",
+          "legendFormat": "Control",
+          "refId": "A"
+        }
+      ],
+      "title": "Control - Impressions",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "short"
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 2},
       "id": 2,
       "options": {
         "colorMode": "value",
@@ -37,19 +86,28 @@
         "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
         "textMode": "auto"
       },
-      "pluginVersion": "10.0.0",
-      "title": "Control - Impressions",
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "expr": "ba_ab_impressions_total{variant=\"treatment\"}",
+          "legendFormat": "Treatment",
+          "refId": "A"
+        }
+      ],
+      "title": "Treatment - Impressions",
       "type": "stat"
     },
     {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
+          "color": {"mode": "thresholds"},
           "mappings": [],
-          "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]},
+          "unit": "percent"
         }
       },
-      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 4},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 2},
       "id": 3,
       "options": {
         "colorMode": "value",
@@ -59,19 +117,28 @@
         "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
         "textMode": "auto"
       },
-      "pluginVersion": "10.0.0",
-      "title": "Treatment - Impressions",
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "expr": "ba_ab_ctr{variant=\"control\"}",
+          "legendFormat": "Control CTR",
+          "refId": "A"
+        }
+      ],
+      "title": "Control - CTR",
       "type": "stat"
     },
     {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
+          "color": {"mode": "thresholds"},
           "mappings": [],
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "percent"
         }
       },
-      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 4},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 2},
       "id": 4,
       "options": {
         "colorMode": "value",
@@ -81,43 +148,264 @@
         "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
         "textMode": "auto"
       },
-      "pluginVersion": "10.0.0",
-      "title": "Control - CTR",
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "expr": "ba_ab_ctr{variant=\"treatment\"}",
+          "legendFormat": "Treatment CTR",
+          "refId": "A"
+        }
+      ],
+      "title": "Treatment - CTR",
       "type": "stat"
     },
     {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
       "fieldConfig": {
         "defaults": {
           "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {"type": "linear"},
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {"group": "A", "mode": "none"},
+            "thresholdsStyle": {"mode": "off"}
+          },
           "mappings": [],
-          "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "percent"
         }
       },
-      "gridPos": {"h": 6, "w": 6, "x": 18, "y": 4},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
       "id": 5,
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
+        "legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi", "sort": "none"}
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "expr": "ba_ab_ctr{variant=\"control\"}",
+          "legendFormat": "Control CTR",
+          "refId": "A"
+        },
+        {
+          "expr": "ba_ab_ctr{variant=\"treatment\"}",
+          "legendFormat": "Treatment CTR",
+          "refId": "B"
+        }
+      ],
+      "title": "CTR Over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {"type": "linear"},
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {"group": "A", "mode": "none"},
+            "thresholdsStyle": {"mode": "off"}
+          },
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "percent"
+        }
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
+      "id": 6,
+      "options": {
+        "legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi", "sort": "none"}
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "expr": "ba_ab_cvr{variant=\"control\"}",
+          "legendFormat": "Control CVR",
+          "refId": "A"
+        },
+        {
+          "expr": "ba_ab_cvr{variant=\"treatment\"}",
+          "legendFormat": "Treatment CVR",
+          "refId": "B"
+        }
+      ],
+      "title": "CVR Over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"hideFrom": {"legend": false, "tooltip": false, "viz": false}},
+          "mappings": []
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Control"}, "properties": [{"id": "color", "value": {"fixedColor": "blue", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Treatment"}, "properties": [{"id": "color", "value": {"fixedColor": "green", "mode": "fixed"}}]}
+        ]
+      },
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 14},
+      "id": 7,
+      "options": {
+        "legend": {"displayMode": "table", "placement": "right", "showLegend": true, "values": ["value", "percent"]},
+        "pieType": "pie",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "tooltip": {"mode": "single", "sort": "none"}
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "expr": "ba_ab_users_total{variant=\"control\"}",
+          "legendFormat": "Control",
+          "refId": "A"
+        },
+        {
+          "expr": "ba_ab_users_total{variant=\"treatment\"}",
+          "legendFormat": "Treatment",
+          "refId": "B"
+        }
+      ],
+      "title": "User Distribution",
+      "type": "piechart"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": -5},
+              {"color": "green", "value": 5}
+            ]
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 14},
+      "id": 8,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
         "orientation": "auto",
         "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
-        "textMode": "auto"
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
       },
-      "pluginVersion": "10.0.0",
-      "title": "Treatment - CTR",
-      "type": "stat"
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "expr": "(ba_ab_ctr{variant=\"treatment\"} - ba_ab_ctr{variant=\"control\"}) / ba_ab_ctr{variant=\"control\"} * 100",
+          "legendFormat": "CTR Lift",
+          "refId": "A"
+        }
+      ],
+      "title": "CTR Lift (%)",
+      "type": "gauge"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${datasource}"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": -5},
+              {"color": "green", "value": 5}
+            ]
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 14},
+      "id": 9,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "pluginVersion": "10.2.0",
+      "targets": [
+        {
+          "expr": "(ba_ab_cvr{variant=\"treatment\"} - ba_ab_cvr{variant=\"control\"}) / ba_ab_cvr{variant=\"control\"} * 100",
+          "legendFormat": "CVR Lift",
+          "refId": "A"
+        }
+      ],
+      "title": "CVR Lift (%)",
+      "type": "gauge"
     }
   ],
   "refresh": "30s",
   "schemaVersion": 38,
-  "style": "dark",
-  "tags": ["ab-testing", "mlops"],
-  "templating": {"list": []},
-  "time": {"from": "now-24h", "to": "now"},
+  "tags": ["ab-testing", "mlops", "movie-recommender"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Data Source",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": {"from": "now-6h", "to": "now"},
   "timepicker": {},
   "timezone": "",
   "title": "A/B Test - Movie Recommender",
-  "uid": "ab-test-movie-recommender",
+  "uid": "ba-ab-test-dashboard",
   "version": 1,
   "weekStart": ""
 }

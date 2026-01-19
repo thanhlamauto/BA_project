@@ -113,20 +113,37 @@ curl https://ba-movie-recommender.onrender.com/health
 
 ---
 
-## Step 4: Grafana Cloud (Optional)
+## Step 4: Grafana Cloud (Optional but Recommended)
 
-### 4.1 Setup
-1. Go to https://grafana.com
-2. Sign up free
-3. Get API Key from Administration → API Keys
+### 4.1 Quick Setup (5 minutes)
 
-### 4.2 Import Dashboard
+**See detailed guide:** [`docs/GRAFANA_SETUP.md`](docs/GRAFANA_SETUP.md)
+
+**Quick steps:**
+1. Sign up at https://grafana.com (free, no credit card)
+2. Get Prometheus Remote Write credentials
+3. Set environment variables:
+   ```bash
+   GRAFANA_CLOUD_URL=https://prometheus-prod-*.grafana.net/api/prom/push
+   GRAFANA_CLOUD_USER=123456
+   GRAFANA_CLOUD_API_KEY=glc_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   ```
+
+### 4.2 Test Connection
+```bash
+python scripts/test_grafana.py
+```
+
+### 4.3 Import Dashboard
 - Dashboards → New → Import
 - Upload: `grafana-dashboards/ab-test-dashboard.json`
+- View real-time A/B test metrics!
 
-### 4.3 Connect Metrics
-- Your app exposes metrics at `/metrics`
-- Configure Prometheus scraping in Grafana Cloud
+**What you get:**
+- ✅ Real-time CTR/CVR monitoring
+- ✅ Beautiful visualizations
+- ✅ Automatic metrics push every 60s
+- ✅ Completely free tier (10K series)
 
 ---
 
@@ -158,6 +175,8 @@ python app.py
 | `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017/ba_project` |
 | `USE_MONGODB_LOGGING` | Use MongoDB for logging | `false` |
 | `BENTOML_ENDPOINT` | BentoCloud API URL | `http://localhost:3000` |
+| `GRAFANA_CLOUD_URL` | Prometheus remote write endpoint | (empty) |
+| `GRAFANA_CLOUD_USER` | Grafana instance/user ID | (empty) |
 | `GRAFANA_CLOUD_API_KEY` | Grafana Cloud API key | (empty) |
 
 ---
