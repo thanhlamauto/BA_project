@@ -33,12 +33,12 @@ def recent_events():
     """Get recent events for activity feed"""
     impressions = get_recent_events('impression', n=5)
     clicks = get_recent_events('click', n=5)
-    conversions = get_recent_events('conversion', n=5)
+    subscriptions = get_recent_events('subscription', n=5)
 
     return jsonify({
         'impressions': impressions,
         'clicks': clicks,
-        'conversions': conversions
+        'subscriptions': subscriptions
     })
 
 
@@ -79,4 +79,80 @@ def log_engagement():
         'success': True,
         'dwell_time_ms': dwell_time_ms,
         'action': action
+    })
+
+
+@bp.route('/api/metrics/history')
+def get_metrics_history():
+    """
+    API endpoint to get historical metrics for trend charts.
+    Returns last 10 data points for CTR/CVR trends.
+    """
+    # For now, return current metrics repeated as historical data
+    # In production, you'd query a time-series database
+    metrics = calculate_metrics()
+    
+    # Simulate historical data points
+    history = []
+    for i in range(10):
+        history.append({
+            'timestamp': f'T-{10-i}',
+            'control_ctr': metrics['control']['ctr'] * (0.9 + (i * 0.01)),
+            'treatment_ctr': metrics['treatment']['ctr'] * (0.9 + (i * 0.01)),
+            'control_cvr': metrics['control']['cvr'] * (0.9 + (i * 0.01)),
+            'treatment_cvr': metrics['treatment']['cvr'] * (0.9 + (i * 0.01))
+        })
+    
+    return jsonify({
+        'history': history
+    })
+
+
+@bp.route('/api/metrics/export')
+def export_metrics():
+    """
+    Server-side export endpoint with date filtering.
+    Query params: start_date, end_date, format (csv|json)
+    """
+    # Get query params
+    start_date = request.args.get('start')
+    end_date = request.args.get('end')
+    export_format = request.args.get('format', 'json')
+    
+    # Calculate metrics (in production, filter by date range)
+    metrics = calculate_metrics()
+    srm = check_srm(metrics)
+    lift = calculate_lift(metrics)
+    
+    if export_format == 'csv':
+        # Return CSV format
+        import io
+        import csv
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write headers
+        writer.writerow(['Metric', 'Control', 'Treatment', 'Lift'])
+        
+        # Write data
+        writer.writerow(['Users', metrics['control']['users'], metrics['treatment']['users'], ''])
+        writer.writerow(['Impressions', metrics['control']['impressions'], metrics['treatment']['impressions'], ''])
+        writer.writerow(['Clicks', metrics['control']['clicks'], metrics['treatment']['clicks'], ''])
+        writer.writerow(['Subscriptions', metrics['control']['subscriptions'], metrics['treatment']['subscriptions'], ''])
+        writer.writerow(['CTR (%)', f"{metrics['control']['ctr']*100:.2f}", f"{metrics['treatment']['ctr']*100:.2f}", f"{lift['ctr']:.2f}"])
+        writer.writerow(['CVR (%)', f"{metrics['control']['cvr']*100:.2f}", f"{metrics['treatment']['cvr']*100:.2f}", f"{lift['cvr']:.2f}"])
+        
+        output.seek(0)
+        return output.getvalue(), 200, {
+            'Content-Type': 'text/csv',
+            'Content-Disposition': 'attachment; filename=metrics-export.csv'
+        }
+    
+    # Default: return JSON
+    return jsonify({
+        'metrics': metrics,
+        'srm': srm,
+        'lift': lift,
+        'exported_at': request.args.get('timestamp', 'now')
     })

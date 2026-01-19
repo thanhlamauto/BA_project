@@ -1,18 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}Home - Netflix Recommender{% endblock %}
+{% block title %}Trang chủ - Rung Động{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* Hero Banner - Using real movie backdrop (Inception from TMDB) */
-    .hero-banner {
-        height: 70vh;
-        background: linear-gradient(to bottom, rgba(20,20,20,0.4), rgba(20,20,20,1)),
-                    url('https://image.tmdb.org/t/p/original/s3TBrRGB1iav7gFOCNx3H31MoES.jpg') center/cover;
-        display: flex;
-        align-items: center;
-        padding: 0 4rem;
-    }
 
     /* Movie Card */
     .movie-card {
@@ -61,40 +52,260 @@
         transition: opacity 0.3s ease;
     }
 
+    /* Featured Carousel Section */
+    .featured-carousel {
+        position: relative;
+        height: 85vh;
+        overflow: hidden;
+        margin-bottom: 3rem;
+    }
+
+    .carousel-slide {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        transition: opacity 0.8s ease-in-out;
+        background-size: cover;
+        background-position: center;
+    }
+
+    .carousel-slide.active {
+        opacity: 1;
+        z-index: 1;
+    }
+
+    .carousel-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(to right, rgba(20,20,20,0.95) 0%, rgba(20,20,20,0.7) 50%, transparent 100%),
+                    linear-gradient(to bottom, rgba(20,20,20,0.3) 0%, rgba(20,20,20,1) 100%);
+        display: flex;
+        align-items: center;
+        padding: 0 4rem;
+    }
+
+    .carousel-content {
+        max-width: 600px;
+        z-index: 2;
+    }
+
+    .carousel-content h1 {
+        font-size: 4rem;
+        font-weight: bold;
+        margin-bottom: 1rem;
+        text-shadow: 2px 2px 8px rgba(0,0,0,0.8);
+    }
+
+    .carousel-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .rating-badge {
+        display: inline-flex;
+        align-items: center;
+        background: rgba(229, 9, 20, 0.9);
+        padding: 0.3rem 0.8rem;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+
+    .year-badge {
+        color: #999;
+        font-size: 1.2rem;
+    }
+
+    .quality-badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.2rem 0.6rem;
+        border-radius: 3px;
+        font-size: 0.9rem;
+        font-weight: bold;
+    }
+
+    .carousel-description {
+        font-size: 1.1rem;
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+        color: #e5e5e5;
+        text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+    }
+
+    .carousel-genres {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .genre-tag {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .carousel-buttons {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .btn-play, .btn-info {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.8rem 2rem;
+        border-radius: 4px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+    }
+
+    .btn-play {
+        background: #e50914;
+    }
+
+    .btn-play:hover {
+        background: #f40612;
+        transform: scale(1.05);
+    }
+
+    .btn-info {
+        background: rgba(109, 109, 110, 0.7);
+        backdrop-filter: blur(10px);
+    }
+
+    .btn-info:hover {
+        background: rgba(109, 109, 110, 0.5);
+    }
+
+    /* Carousel Navigation */
+    .carousel-nav {
+        position: absolute;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 0.5rem;
+        z-index: 10;
+    }
+
+    .carousel-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.5);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .carousel-dot.active {
+        background: #e50914;
+        width: 40px;
+        border-radius: 6px;
+    }
+
+    .carousel-arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        border: none;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        font-size: 1.5rem;
+        cursor: pointer;
+        z-index: 10;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .carousel-arrow:hover {
+        background: rgba(0, 0, 0, 0.8);
+        transform: translateY(-50%) scale(1.1);
+    }
+
+    .carousel-arrow.prev {
+        left: 2rem;
+    }
+
+    .carousel-arrow.next {
+        right: 2rem;
+    }
+
+    /* Row scroll */
+    .movie-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1rem;
+        padding: 0 4rem;
+        transition: opacity 0.3s ease;
+    }
+
     @media (max-width: 768px) {
         .movie-row {
             grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             padding: 0 1rem;
         }
-        .hero-banner {
-            padding: 0 1rem;
+        .featured-carousel {
+            height: 70vh;
+        }
+        .carousel-overlay {
+            padding: 0 1.5rem;
+        }
+        .carousel-content h1 {
+            font-size: 2.5rem;
+        }
+        .carousel-description {
+            font-size: 0.95rem;
+        }
+        .carousel-arrow {
+            width: 40px;
+            height: 40px;
+            font-size: 1rem;
+        }
+        .carousel-arrow.prev {
+            left: 0.5rem;
+        }
+        .carousel-arrow.next {
+            right: 0.5rem;
         }
     }
+
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Hero Banner -->
-<div class="hero-banner">
-    <div class="max-w-2xl">
-        <h1 class="text-5xl md:text-6xl font-bold mb-4">Welcome to Netflix</h1>
-        <p class="text-xl mb-6 text-gray-300">
-            Discover personalized movie recommendations powered by A/B testing
-        </p>
-        <div class="flex space-x-4">
-            <button id="heroLoginBtn" class="bg-red-600 hover:bg-red-700 px-8 py-3 rounded text-lg font-medium transition flex items-center">
-                <i class="fas fa-play mr-2"></i>Get Started
-            </button>
-            <button class="bg-gray-700 bg-opacity-70 hover:bg-opacity-50 px-8 py-3 rounded text-lg font-medium transition flex items-center">
-                <i class="fas fa-info-circle mr-2"></i>More Info
-            </button>
-        </div>
-        <p class="text-sm text-gray-400 mt-4">
-            <i class="fas fa-flask mr-2"></i>
-            This is an A/B testing demo. You'll be assigned to either Control (random) or Treatment (popularity-based) recommendations.
-        </p>
-    </div>
+<!-- Featured Movie Carousel -->
+<div class="featured-carousel" id="featuredCarousel">
+    <!-- Carousel slides will be dynamically loaded here -->
+    
+    <!-- Navigation Arrows -->
+    <button class="carousel-arrow prev" id="prevSlide">
+        <i class="fas fa-chevron-left"></i>
+    </button>
+    <button class="carousel-arrow next" id="nextSlide">
+        <i class="fas fa-chevron-right"></i>
+    </button>
+    
+    <!-- Carousel Dots -->
+    <div class="carousel-nav" id="carouselDots"></div>
 </div>
+
+<!-- Hero Banner removed - using carousel instead -->
 
 <!-- Recommendations Section -->
 <div class="py-12">
@@ -145,11 +356,11 @@
 <script>
     let currentMovieId = null;
     let modalOpenTime = null;  // Track when modal opens (for dwell time)
-
-    // Hero login button
-    document.getElementById('heroLoginBtn').addEventListener('click', () => {
-        document.getElementById('loginBtn').click();
-    });
+    
+    // Carousel state
+    let carouselSlides = [];
+    let currentSlide = 0;
+    let carouselInterval = null;
 
     // Prompt login button
     document.getElementById('promptLoginBtn').addEventListener('click', () => {
@@ -401,5 +612,177 @@
             document.getElementById('movieModal').classList.add('hidden');
         }
     });
+
+    // ========== CAROUSEL FUNCTIONALITY ==========
+    
+    const featuredMovies = [
+        { movieId: 1, title: 'The Shawshank Redemption', year: 1994, rating: 4.5, genres: 'Drama', 
+          backdrop: 'https://image.tmdb.org/t/p/original/kXfqcdQKsToO0OUXHcrrNCHDBzO.jpg',
+          description: 'Two imprisoned men bond over a number of years, finding solace and eventual redemption through acts of common decency.' },
+        
+        { movieId: 3, title: 'The Dark Knight', year: 2008, rating: 4.3, genres: 'Action|Crime|Drama',
+          backdrop: 'https://image.tmdb.org/t/p/original/nMKdUUepR0i5zn0y1T4CsSB5chy.jpg',
+          description: 'When the menace known as the Joker wreaks havoc on Gotham, Batman must accept one of the greatest psychological tests to fight injustice.' },
+        
+        { movieId: 6, title: 'Inception', year: 2010, rating: 4.2, genres: 'Action|Mystery|Sci-Fi',
+          backdrop: 'https://image.tmdb.org/t/p/original/s3TBrRGB1iav7gFOCNx3H31MoES.jpg',
+          description: 'A thief who steals corporate secrets through dream-sharing technology is given the inverse task of planting an idea into the mind of a CEO.' },
+        
+        { movieId: 8, title: 'Interstellar', year: 2014, rating: 4.1, genres: 'Adventure|Drama|Sci-Fi',
+          backdrop: 'https://image.tmdb.org/t/p/original/xJHokMbljvjADYdit5fK5VQsXEG.jpg',
+          description: 'A team of explorers travel through a wormhole in space in an attempt to ensure humanity\'s survival.' },
+        
+        { movieId: 12, title: 'Avengers: Endgame', year: 2019, rating: 3.9, genres: 'Action|Adventure|Sci-Fi',
+          backdrop: 'https://image.tmdb.org/t/p/original/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg',
+          description: 'After the devastating events, the Avengers assemble once more to reverse Thanos\' actions and restore balance to the universe.' },
+        
+        { movieId: 21, title: 'Spirited Away', year: 2001, rating: 4.3, genres: 'Animation|Adventure|Fantasy',
+          backdrop: 'https://image.tmdb.org/t/p/original/Ab8mkHmkYADjU7wQiOkia9BzGvS.jpg',
+          description: 'During her family\'s move, a sullen 10-year-old girl wanders into a world ruled by gods, witches, and spirits.' }
+    ];
+
+    function initCarousel() {
+        const carousel = document.getElementById('featuredCarousel');
+        const dotsContainer = document.getElementById('carouselDots');
+        
+        // Create slides
+        featuredMovies.forEach((movie, index) => {
+            // Create slide
+            const slide = document.createElement('div');
+            slide.className = `carousel-slide ${index === 0 ? 'active' : ''}`;
+            slide.style.backgroundImage = `url('${movie.backdrop}')`;
+            
+            // Extract year from title or use year property
+            const year = movie.year || movie.title.match(/\((\d{4})\)/)?.[1] || '';
+            const cleanTitle = movie.title.replace(/\s*\(\d{4}\)/, '');
+            
+            slide.innerHTML = `
+                <div class="carousel-overlay">
+                    <div class="carousel-content">
+                        <h1>${cleanTitle}</h1>
+                        
+                        <div class="carousel-meta">
+                            <div class="rating-badge">
+                                <i class="fas fa-star text-yellow-400 mr-1"></i>
+                                ${movie.rating.toFixed(1)}
+                            </div>
+                            ${year ? `<span class="year-badge">${year}</span>` : ''}
+                            <span class="quality-badge">FHD</span>
+                        </div>
+                        
+                        <p class="carousel-description">${movie.description}</p>
+                        
+                        <div class="carousel-genres">
+                            ${movie.genres.split('|').map(genre => 
+                                `<span class="genre-tag">${genre.trim()}</span>`
+                            ).join('')}
+                        </div>
+                        
+                        <div class="carousel-buttons">
+                            <button class="btn-play" onclick="playMovie(${movie.movieId})">
+                                <i class="fas fa-play mr-2"></i>Watch Now
+                            </button>
+                            <button class="btn-info" onclick="showMovieInfo(${movie.movieId})">
+                                <i class="fas fa-info-circle mr-2"></i>More Info
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            carousel.appendChild(slide);
+            
+            // Create dot
+            const dot = document.createElement('div');
+            dot.className = `carousel-dot ${index === 0 ? 'active' : ''}`;
+            dot.addEventListener('click', () => goToSlide(index));
+            dotsContainer.appendChild(dot);
+        });
+        
+        carouselSlides = document.querySelectorAll('.carousel-slide');
+        
+        // Auto-play
+        startCarousel();
+    }
+
+    function goToSlide(index) {
+        const dots = document.querySelectorAll('.carousel-dot');
+        
+        // Remove active class from all
+        carouselSlides[currentSlide].classList.remove('active');
+        dots[currentSlide].classList.remove('active');
+        
+        // Add active class to target
+        currentSlide = index;
+        carouselSlides[currentSlide].classList.add('active');
+        dots[currentSlide].classList.add('active');
+        
+        // Reset auto-play timer
+        resetCarousel();
+    }
+
+    function nextSlide() {
+        const nextIndex = (currentSlide + 1) % carouselSlides.length;
+        goToSlide(nextIndex);
+    }
+
+    function prevSlide() {
+        const prevIndex = (currentSlide - 1 + carouselSlides.length) % carouselSlides.length;
+        goToSlide(prevIndex);
+    }
+
+    function startCarousel() {
+        carouselInterval = setInterval(nextSlide, 3000); // Change slide every 3 seconds
+    }
+
+    function resetCarousel() {
+        clearInterval(carouselInterval);
+        startCarousel();
+    }
+
+    function playMovie(movieId) {
+        // Redirect to login if not logged in
+        const userId = '{{ session.get("user_id", "") }}';
+        if (!userId) {
+            document.getElementById('loginBtn').click();
+            return;
+        }
+        
+        // Open movie modal
+        const movie = featuredMovies.find(m => m.movieId === movieId);
+        if (movie) {
+            // You can enhance this to load full movie details
+            showToast('Playing ' + movie.title, 'info');
+        }
+    }
+
+    function showMovieInfo(movieId) {
+        // Redirect to login if not logged in
+        const userId = '{{ session.get("user_id", "") }}';
+        if (!userId) {
+            document.getElementById('loginBtn').click();
+            return;
+        }
+        
+        // Scroll to recommendations to see this movie
+        document.querySelector('#recommendationsSection').scrollIntoView({ behavior: 'smooth' });
+        showToast('Check out more details below!', 'info');
+    }
+
+    // Event listeners for carousel
+    document.getElementById('prevSlide').addEventListener('click', prevSlide);
+    document.getElementById('nextSlide').addEventListener('click', nextSlide);
+    
+    // Pause on hover
+    document.getElementById('featuredCarousel').addEventListener('mouseenter', () => {
+        clearInterval(carouselInterval);
+    });
+    
+    document.getElementById('featuredCarousel').addEventListener('mouseleave', () => {
+        startCarousel();
+    });
+
+    // Initialize carousel on page load
+    initCarousel();
 </script>
 {% endblock %}

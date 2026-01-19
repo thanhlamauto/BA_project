@@ -1,0 +1,13 @@
+service: "service:MovieRecommender"
+labels:
+  owner: ba-team
+  project: movie-recommender
+  stage: production
+include:
+  - "service.py"
+  - "recommender_logic.py"
+  - "data/movies.csv"
+python:
+  packages:
+    - pandas==2.1.4
+    - pydantic==2.5.0

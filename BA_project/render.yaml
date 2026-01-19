@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: ba-movie-recommender
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 60 app:app"
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: ENVIRONMENT
+        value: production
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: SECRET_KEY
+        generateValue: true
+      # MongoDB Atlas - set in Render dashboard
+      - key: MONGODB_URI
+        sync: false
+      - key: USE_MONGODB_LOGGING
+        value: "false"
+      # BentoCloud - set in Render dashboard
+      - key: BENTOML_ENDPOINT
+        sync: false
+      # Grafana Cloud - set in Render dashboard
+      - key: GRAFANA_CLOUD_API_KEY
+        sync: false
+    healthCheckPath: /health
+    autoDeploy: true

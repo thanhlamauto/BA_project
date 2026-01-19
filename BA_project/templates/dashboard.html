@@ -1,27 +1,201 @@
 {% extends "base.html" %}
 
-{% block title %}A/B Testing Dashboard - Netflix{% endblock %}
+{% block title %}A/B Testing Dashboard - Rung Động{% endblock %}
 
 {% block extra_css %}
+<!-- Chart.js and jsPDF Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <style>
+    /* Modern Glassmorphism Cards */
     .metric-card {
-        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-        border: 1px solid #3d3d3d;
+        background: rgba(26, 26, 26, 0.8);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 12px;
         padding: 1.5rem;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease;
+        animation: fadeInUp 0.6s ease-out backwards;
     }
 
     .metric-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        border-color: rgba(255, 255, 255, 0.2);
     }
 
     .chart-container {
-        background: #1a1a1a;
-        border: 1px solid #3d3d3d;
+        background: rgba(26, 26, 26, 0.8);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 12px;
         padding: 1.5rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        animation: fadeInUp 0.8s ease-out backwards;
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+        50% {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+    }
+
+    @keyframes countUp {
+        from {
+            opacity: 0;
+            transform: scale(0.5);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    /* Stagger animation delays */
+    .metric-card:nth-child(1) { animation-delay: 0.1s; }
+    .metric-card:nth-child(2) { animation-delay: 0.2s; }
+    .metric-card:nth-child(3) { animation-delay: 0.3s; }
+    .metric-card:nth-child(4) { animation-delay: 0.4s; }
+
+    /* Metric values with animation */
+    .metric-value {
+        transition: all 0.3s ease;
+    }
+
+    .metric-value.pulse-animation {
+        animation: pulse 1s ease-in-out;
+    }
+
+    /* Filter Bar */
+    .filters-bar {
+        background: rgba(26, 26, 26, 0.8);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .filter-input, .filter-select {
+        background: rgba(45, 45, 45, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        color: white;
+        transition: all 0.3s ease;
+    }
+
+    .filter-input:focus, .filter-select:focus {
+        outline: none;
+        border-color: #e50914;
+        box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.2);
+    }
+
+    .export-btn {
+        background: linear-gradient(135deg, #e50914 0%, #b20710 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        color: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+
+    .export-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(229, 9, 20, 0.4);
+    }
+
+    /* Real-time indicator */
+    .realtime-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: rgba(45, 45, 45, 0.8);
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .realtime-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #10b981;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    /* Skeleton Loading */
+    .skeleton-card {
+        background: linear-gradient(90deg, #1a1a1a 25%, #2d2d2d 50%, #1a1a1a 75%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s ease-in-out infinite;
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+
+    @keyframes skeleton-loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    .skeleton-line {
+        height: 20px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        margin-bottom: 1rem;
+    }
+
+    .skeleton-circle {
+        width: 60px;
+        height: 60px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+    }
+
+    /* Chart canvas styling */
+    canvas {
+        max-height: 400px;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .filters-bar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .filter-input, .filter-select, .export-btn {
+            width: 100%;
+        }
     }
 </style>
 {% endblock %}
@@ -34,12 +208,55 @@
         <p class="text-gray-400">Real-time metrics and analytics for recommendation A/B test</p>
     </div>
 
-    <!-- Refresh Button -->
-    <div class="mb-6">
-        <button id="refreshBtn" class="bg-red-600 hover:bg-red-700 px-6 py-2 rounded transition">
-            <i class="fas fa-sync-alt mr-2"></i>Refresh Data
+    <!-- Filters and Controls Bar -->
+    <div class="filters-bar">
+        <div class="flex items-center gap-2">
+            <i class="fas fa-filter text-gray-400"></i>
+            <span class="text-sm font-semibold">Filters:</span>
+        </div>
+        
+        <!-- Date Range Picker -->
+        <input type="date" id="startDate" class="filter-input" title="Start Date">
+        <span class="text-gray-400">to</span>
+        <input type="date" id="endDate" class="filter-input" title="End Date">
+        
+        <!-- Metric Selector -->
+        <select id="metricSelector" class="filter-select">
+            <option value="all">All Metrics</option>
+            <option value="ctr">CTR Only</option>
+            <option value="cvr">CVR Only</option>
+        </select>
+
+        <!-- Apply Filter Button -->
+        <button id="applyFilters" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded transition">
+            <i class="fas fa-check mr-2"></i>Apply
         </button>
-        <span class="ml-4 text-sm text-gray-400">Last updated: <span id="lastUpdated">Never</span></span>
+        
+        <div class="flex-grow"></div>
+        
+        <!-- Export Buttons -->
+        <button id="exportCSV" class="export-btn">
+            <i class="fas fa-file-csv mr-2"></i>Export CSV
+        </button>
+        <button id="exportPDF" class="export-btn">
+            <i class="fas fa-file-pdf mr-2"></i>Export PDF
+        </button>
+        
+        <!-- Refresh Button -->
+        <button id="refreshBtn" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded transition">
+            <i class="fas fa-sync-alt mr-2"></i>Refresh
+        </button>
+        
+        <!-- Real-time Indicator -->
+        <div class="realtime-indicator">
+            <div class="realtime-dot"></div>
+            <span class="text-xs text-gray-400">Live</span>
+        </div>
+    </div>
+
+    <!-- Last Updated -->
+    <div class="mb-6 text-sm text-gray-400">
+        Last updated: <span id="lastUpdated">Never</span>
     </div>
 
     <!-- SRM Alert -->
@@ -53,15 +270,25 @@
         </div>
     </div>
 
+    <!-- Loading State -->
+    <div id="loadingState" class="hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="skeleton-card"><div class="skeleton-line"></div><div class="skeleton-circle"></div></div>
+            <div class="skeleton-card"><div class="skeleton-line"></div><div class="skeleton-circle"></div></div>
+            <div class="skeleton-card"><div class="skeleton-line"></div><div class="skeleton-circle"></div></div>
+            <div class="skeleton-card"><div class="skeleton-line"></div><div class="skeleton-circle"></div></div>
+        </div>
+    </div>
+
     <!-- Overview Metrics -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div id="metricsContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <!-- Total Users -->
         <div class="metric-card">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-gray-400 text-sm">Total Users</span>
                 <i class="fas fa-users text-blue-500"></i>
             </div>
-            <div class="text-3xl font-bold" id="totalUsers">0</div>
+            <div class="text-3xl font-bold metric-value" id="totalUsers">0</div>
         </div>
 
         <!-- Total Impressions -->
@@ -70,7 +297,7 @@
                 <span class="text-gray-400 text-sm">Total Impressions</span>
                 <i class="fas fa-eye text-purple-500"></i>
             </div>
-            <div class="text-3xl font-bold" id="totalImpressions">0</div>
+            <div class="text-3xl font-bold metric-value" id="totalImpressions">0</div>
         </div>
 
         <!-- Total Clicks -->
@@ -79,16 +306,16 @@
                 <span class="text-gray-400 text-sm">Total Clicks</span>
                 <i class="fas fa-mouse-pointer text-green-500"></i>
             </div>
-            <div class="text-3xl font-bold" id="totalClicks">0</div>
+            <div class="text-3xl font-bold metric-value" id="totalClicks">0</div>
         </div>
 
-        <!-- Total Conversions -->
+        <!-- Total Subscriptions -->
         <div class="metric-card">
             <div class="flex items-center justify-between mb-2">
-                <span class="text-gray-400 text-sm">Total Conversions</span>
-                <i class="fas fa-star text-yellow-500"></i>
+                <span class="text-gray-400 text-sm">Total Subscriptions</span>
+                <i class="fas fa-bell text-yellow-500"></i>
             </div>
-            <div class="text-3xl font-bold" id="totalConversions">0</div>
+            <div class="text-3xl font-bold metric-value" id="totalSubscriptions">0</div>
         </div>
     </div>
 
@@ -125,8 +352,8 @@
 
                 <div>
                     <div class="flex justify-between mb-1">
-                        <span class="text-sm text-gray-400">Conversions</span>
-                        <span class="font-bold" id="controlConversions">0</span>
+                        <span class="text-sm text-gray-400">Subscriptions</span>
+                        <span class="font-bold" id="controlSubscriptions">0</span>
                     </div>
                 </div>
 
@@ -141,7 +368,7 @@
 
                 <div>
                     <div class="flex justify-between mb-1">
-                        <span class="text-sm text-gray-400">CVR (Conversion Rate)</span>
+                        <span class="text-sm text-gray-400">CVR (Subscription Rate)</span>
                         <span class="font-bold text-yellow-400 text-lg" id="controlCVR">0.00%</span>
                     </div>
                 </div>
@@ -179,8 +406,8 @@
 
                 <div>
                     <div class="flex justify-between mb-1">
-                        <span class="text-sm text-gray-400">Conversions</span>
-                        <span class="font-bold" id="treatmentConversions">0</span>
+                        <span class="text-sm text-gray-400">Subscriptions</span>
+                        <span class="font-bold" id="treatmentSubscriptions">0</span>
                     </div>
                 </div>
 
@@ -195,7 +422,7 @@
 
                 <div>
                     <div class="flex justify-between mb-1">
-                        <span class="text-sm text-gray-400">CVR (Conversion Rate)</span>
+                        <span class="text-sm text-gray-400">CVR (Subscription Rate)</span>
                         <span class="font-bold text-yellow-400 text-lg" id="treatmentCVR">0.00%</span>
                     </div>
                 </div>
@@ -210,7 +437,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="text-center p-6 bg-gray-900 rounded-lg">
                 <div class="text-sm text-gray-400 mb-2">CTR Lift</div>
-                <div class="text-4xl font-bold" id="ctrLift">
+                <div class="text-4xl font-bold metric-value" id="ctrLift">
                     <span class="text-gray-400">-</span>
                 </div>
                 <div class="text-xs text-gray-500 mt-2">Percentage change in click-through rate</div>
@@ -218,11 +445,44 @@
 
             <div class="text-center p-6 bg-gray-900 rounded-lg">
                 <div class="text-sm text-gray-400 mb-2">CVR Lift</div>
-                <div class="text-4xl font-bold" id="cvrLift">
+                <div class="text-4xl font-bold metric-value" id="cvrLift">
                     <span class="text-gray-400">-</span>
                 </div>
-                <div class="text-xs text-gray-500 mt-2">Percentage change in conversion rate</div>
+                <div class="text-xs text-gray-500 mt-2">Percentage change in subscription rate</div>
             </div>
+        </div>
+    </div>
+
+    <!-- Interactive Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- CTR/CVR Trends Chart -->
+        <div class="chart-container">
+            <h3 class="text-xl font-bold mb-4 flex items-center">
+                <i class="fas fa-chart-line mr-2 text-blue-500"></i>
+                CTR/CVR Trends
+            </h3>
+            <canvas id="trendsChart"></canvas>
+        </div>
+
+        <!-- Variant Distribution Chart -->
+        <div class="chart-container">
+            <h3 class="text-xl font-bold mb-4 flex items-center">
+                <i class="fas fa-chart-pie mr-2 text-green-500"></i>
+                Variant Distribution
+            </h3>
+            <canvas id="distributionChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Conversion Funnel Chart -->
+    <div class="chart-container mb-8">
+        <h3 class="text-xl font-bold mb-4 flex items-center">
+            <i class="fas fa-filter mr-2 text-purple-500"></i>
+            Conversion Funnel
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <canvas id="funnelControlChart"></canvas>
+            <canvas id="funnelTreatmentChart"></canvas>
         </div>
     </div>
 
@@ -295,11 +555,11 @@
                 </div>
             </div>
 
-            <!-- Recent Conversions -->
+            <!-- Recent Subscriptions -->
             <div>
-                <h4 class="text-sm font-bold text-gray-400 mb-2">Recent Conversions</h4>
-                <div id="recentConversions" class="space-y-2">
-                    <p class="text-sm text-gray-500">No conversions yet</p>
+                <h4 class="text-sm font-bold text-gray-400 mb-2">Recent Subscriptions</h4>
+                <div id="recentSubscriptions" class="space-y-2">
+                    <p class="text-sm text-gray-500">No subscriptions yet</p>
                 </div>
             </div>
         </div>
@@ -309,28 +569,265 @@
 
 {% block extra_js %}
 <script>
+    // Global chart instances
+    let trendsChart, distributionChart, funnelControlChart, funnelTreatmentChart;
+    let currentMetricsData = null;
+
+    // Initialize all charts
+    function initializeCharts() {
+        // Trends Chart (Line)
+        const trendsCtx = document.getElementById('trendsChart').getContext('2d');
+        trendsChart = new Chart(trendsCtx, {
+            type: 'line',
+            data: {
+                labels: ['Now'],
+                datasets: [
+                    {
+                        label: 'Control CTR',
+                        data: [0],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Treatment CTR',
+                        data: [0],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: true, labels: { color: '#fff' } },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: '#9ca3af', callback: (val) => val + '%' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    },
+                    x: {
+                        ticks: { color: '#9ca3af' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    }
+                },
+                animation: {
+                    duration: 750,
+                    easing: 'easeInOutCubic'
+                }
+            }
+        });
+
+        // Distribution Chart (Doughnut)
+        const distributionCtx = document.getElementById('distributionChart').getContext('2d');
+        distributionChart = new Chart(distributionCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Control', 'Treatment'],
+                datasets: [{
+                    data: [50, 50],
+                    backgroundColor: ['#3b82f6', '#10b981'],
+                    borderWidth: 2,
+                    borderColor: '#1a1a1a',
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: true, labels: { color: '#fff', font: { size: 14 } } },
+                    tooltip: { 
+                        callbacks: {
+                            label: (context) => {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                return `${label}: ${value.toFixed(1)}%`;
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    animateRotate: true,
+                    animateScale: true,
+                    duration: 1000
+                }
+            }
+        });
+
+        // Funnel Charts (Bar)
+        const funnelControlCtx = document.getElementById('funnelControlChart').getContext('2d');
+        funnelControlChart = new Chart(funnelControlCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Impressions', 'Clicks', 'Subscriptions'],
+                datasets: [{
+                    label: 'Control',
+                    data: [100, 25, 8],
+                    backgroundColor: ['#3b82f6', '#60a5fa', '#93c5fd'],
+                    borderColor: '#1e40af',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: true, labels: { color: '#fff' } },
+                    title: { display: true, text: 'Control Funnel', color: '#fff', font: { size: 14 } }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { color: '#9ca3af' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    },
+                    y: {
+                        ticks: { color: '#9ca3af' },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+
+        const funnelTreatmentCtx = document.getElementById('funnelTreatmentChart').getContext('2d');
+        funnelTreatmentChart = new Chart(funnelTreatmentCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Impressions', 'Clicks', 'Subscriptions'],
+                datasets: [{
+                    label: 'Treatment',
+                    data: [100, 38, 18],
+                    backgroundColor: ['#10b981', '#34d399', '#6ee7b7'],
+                    borderColor: '#059669',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: true, labels: { color: '#fff' } },
+                    title: { display: true, text: 'Treatment Funnel', color: '#fff', font: { size: 14 } }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { color: '#9ca3af' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    },
+                    y: {
+                        ticks: { color: '#9ca3af' },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    // Update charts with new data
+    function updateCharts(data) {
+        const { metrics } = data;
+
+        // Update trends chart (add new data point)
+        const controlCTR = (metrics.control.ctr * 100).toFixed(2);
+        const treatmentCTR = (metrics.treatment.ctr * 100).toFixed(2);
+        
+        const currentTime = new Date().toLocaleTimeString();
+        
+        // Keep last 10 data points
+        if (trendsChart.data.labels.length > 10) {
+            trendsChart.data.labels.shift();
+            trendsChart.data.datasets[0].data.shift();
+            trendsChart.data.datasets[1].data.shift();
+        }
+        
+        trendsChart.data.labels.push(currentTime);
+        trendsChart.data.datasets[0].data.push(parseFloat(controlCTR));
+        trendsChart.data.datasets[1].data.push(parseFloat(treatmentCTR));
+        trendsChart.update('none'); // Update without animation for smooth transitions
+
+        // Update distribution chart
+        const totalUsers = metrics.control.users + metrics.treatment.users;
+        if (totalUsers > 0) {
+            const controlRatio = (metrics.control.users / totalUsers) * 100;
+            const treatmentRatio = (metrics.treatment.users / totalUsers) * 100;
+            distributionChart.data.datasets[0].data = [controlRatio, treatmentRatio];
+            distributionChart.update();
+        }
+
+        // Update funnel charts with normalized percentages
+        const controlImpressions = metrics.control.impressions || 1;
+        const treatmentImpressions = metrics.treatment.impressions || 1;
+        
+        funnelControlChart.data.datasets[0].data = [
+            100,
+            (metrics.control.clicks / controlImpressions) * 100,
+            (metrics.control.subscriptions / controlImpressions) * 100
+        ];
+        funnelControlChart.update();
+
+        funnelTreatmentChart.data.datasets[0].data = [
+            100,
+            (metrics.treatment.clicks / treatmentImpressions) * 100,
+            (metrics.treatment.subscriptions / treatmentImpressions) * 100
+        ];
+        funnelTreatmentChart.update();
+    }
+
+    // Show loading state
+    function showLoading() {
+        document.getElementById('loadingState').classList.remove('hidden');
+        document.getElementById('metricsContent').classList.add('opacity-50');
+    }
+
+    // Hide loading state
+    function hideLoading() {
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('metricsContent').classList.remove('opacity-50');
+    }
+
+    // Animate metric changes
+    function animateMetricChanges() {
+        document.querySelectorAll('.metric-value').forEach(elem => {
+            elem.classList.add('pulse-animation');
+            setTimeout(() => elem.classList.remove('pulse-animation'), 1000);
+        });
+    }
+
     async function loadMetrics() {
         try {
             const response = await fetch('/api/metrics');
             const data = await response.json();
+            
+            currentMetricsData = data;
 
             updateMetrics(data);
+            updateCharts(data);
             updateRecentActivity();
-
-            // Update performance metrics
             updatePerformanceMetrics(response);
 
-            // Update timestamp
             document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+            animateMetricChanges();
 
         } catch (error) {
             console.error('Error loading metrics:', error);
-            showToast('Failed to load metrics', 'error');
+            if (typeof showToast !== 'undefined') {
+                showToast('Failed to load metrics', 'error');
+            }
         }
     }
 
     function updatePerformanceMetrics(response) {
-        // Get API latency from response header
         const latencyHeader = response.headers.get('X-Response-Time-Ms');
         if (latencyHeader) {
             const latency = parseFloat(latencyHeader);
@@ -338,43 +835,36 @@
                 <span class="text-purple-400">${latency.toFixed(1)}ms</span>
             `;
         }
-
-        // Queue size is always low due to async logging
-        // In production, you'd fetch this from a monitoring endpoint
         document.getElementById('queueSize').textContent = '0';
     }
 
     function updateMetrics(data) {
         const { metrics, srm, lift } = data;
 
-        // Total metrics
         const totalUsers = metrics.control.users + metrics.treatment.users;
         const totalImpressions = metrics.control.impressions + metrics.treatment.impressions;
         const totalClicks = metrics.control.clicks + metrics.treatment.clicks;
-        const totalConversions = metrics.control.conversions + metrics.treatment.conversions;
+        const totalSubscriptions = metrics.control.subscriptions + metrics.treatment.subscriptions;
 
         document.getElementById('totalUsers').textContent = totalUsers;
         document.getElementById('totalImpressions').textContent = totalImpressions;
         document.getElementById('totalClicks').textContent = totalClicks;
-        document.getElementById('totalConversions').textContent = totalConversions;
+        document.getElementById('totalSubscriptions').textContent = totalSubscriptions;
 
-        // Control metrics
         document.getElementById('controlUsers').textContent = metrics.control.users;
         document.getElementById('controlImpressions').textContent = metrics.control.impressions;
         document.getElementById('controlClicks').textContent = metrics.control.clicks;
-        document.getElementById('controlConversions').textContent = metrics.control.conversions;
+        document.getElementById('controlSubscriptions').textContent = metrics.control.subscriptions;
         document.getElementById('controlCTR').textContent = (metrics.control.ctr * 100).toFixed(2) + '%';
         document.getElementById('controlCVR').textContent = (metrics.control.cvr * 100).toFixed(2) + '%';
 
-        // Treatment metrics
         document.getElementById('treatmentUsers').textContent = metrics.treatment.users;
         document.getElementById('treatmentImpressions').textContent = metrics.treatment.impressions;
         document.getElementById('treatmentClicks').textContent = metrics.treatment.clicks;
-        document.getElementById('treatmentConversions').textContent = metrics.treatment.conversions;
+        document.getElementById('treatmentSubscriptions').textContent = metrics.treatment.subscriptions;
         document.getElementById('treatmentCTR').textContent = (metrics.treatment.ctr * 100).toFixed(2) + '%';
         document.getElementById('treatmentCVR').textContent = (metrics.treatment.cvr * 100).toFixed(2) + '%';
 
-        // Lift
         const ctrLiftElem = document.getElementById('ctrLift');
         const cvrLiftElem = document.getElementById('cvrLift');
 
@@ -392,7 +882,6 @@
             cvrLiftElem.innerHTML = `<span class="${cvrLiftClass}">${cvrLiftSign}${cvrLiftValue}%</span>`;
         }
 
-        // SRM check
         const srmAlert = document.getElementById('srmAlert');
         if (srm.has_srm) {
             srmAlert.classList.remove('hidden');
@@ -401,7 +890,6 @@
             srmAlert.classList.add('hidden');
         }
 
-        // Variant distribution
         if (totalUsers > 0) {
             document.getElementById('controlRatio').textContent = (srm.control_ratio * 100).toFixed(1) + '%';
             document.getElementById('treatmentRatio').textContent = (srm.treatment_ratio * 100).toFixed(1) + '%';
@@ -413,7 +901,6 @@
             const response = await fetch('/api/recent-events');
             const data = await response.json();
 
-            // Recent clicks
             const clicksContainer = document.getElementById('recentClicks');
             if (data.clicks && data.clicks.length > 0) {
                 clicksContainer.innerHTML = data.clicks.map(event => `
@@ -424,29 +911,103 @@
                 `).join('');
             }
 
-            // Recent conversions
-            const conversionsContainer = document.getElementById('recentConversions');
-            if (data.conversions && data.conversions.length > 0) {
-                conversionsContainer.innerHTML = data.conversions.map(event => `
+            const subscriptionsContainer = document.getElementById('recentSubscriptions');
+            if (data.subscriptions && data.subscriptions.length > 0) {
+                subscriptionsContainer.innerHTML = data.subscriptions.map(event => `
                     <div class="text-sm text-gray-400 bg-gray-900 p-2 rounded">
-                        <span class="font-bold">${event.user_id}</span> (${event.variant}) rated movie ${event.movie_id} with ${event.rating}★
+                        <span class="font-bold">${event.user_id}</span> (${event.variant}) subscribed to movie ${event.movie_id}
                         <span class="text-xs text-gray-600 ml-2">${new Date(event.timestamp).toLocaleTimeString()}</span>
                     </div>
                 `).join('');
             }
-
         } catch (error) {
             console.error('Error loading recent activity:', error);
         }
     }
 
-    // Refresh button
+    // Export to CSV
+    function exportToCSV() {
+        if (!currentMetricsData) return;
+        
+        const { metrics } = currentMetricsData;
+        const csv = [
+            ['Metric', 'Control', 'Treatment'],
+            ['Users', metrics.control.users, metrics.treatment.users],
+            ['Impressions', metrics.control.impressions, metrics.treatment.impressions],
+            ['Clicks', metrics.control.clicks, metrics.treatment.clicks],
+            ['Subscriptions', metrics.control.subscriptions, metrics.treatment.subscriptions],
+            ['CTR (%)', (metrics.control.ctr * 100).toFixed(2), (metrics.treatment.ctr * 100).toFixed(2)],
+            ['CVR (%)', (metrics.control.cvr * 100).toFixed(2), (metrics.treatment.cvr * 100).toFixed(2)]
+        ].map(row => row.join(',')).join('\n');
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ab-test-metrics-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+
+    // Export to PDF
+    function exportToPDF() {
+        if (!currentMetricsData || typeof jsPDF === 'undefined') return;
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        // Title
+        doc.setFontSize(20);
+        doc.text('A/B Testing Dashboard Report', 20, 20);
+        
+        doc.setFontSize(12);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 30);
+        doc.text('Rung Động - Recommender System', 20, 38);
+
+        // Add metrics table
+        doc.setFontSize(14);
+        doc.text('Metrics Summary', 20, 50);
+        
+        doc.setFontSize(10);
+        const { metrics, lift } = currentMetricsData;
+        let y = 60;
+        doc.text(`Total Users: ${metrics.control.users + metrics.treatment.users}`, 20, y);
+        y += 8;
+        doc.text(`Control CTR: ${(metrics.control.ctr * 100).toFixed(2)}% | Treatment CTR: ${(metrics.treatment.ctr * 100).toFixed(2)}%`, 20, y);
+        y += 8;
+        doc.text(`Control CVR: ${(metrics.control.cvr * 100).toFixed(2)}% | Treatment CVR: ${(metrics.treatment.cvr * 100).toFixed(2)}%`, 20, y);
+        y += 8;
+        doc.text(`CTR Lift: ${lift.ctr > 0 ? '+' : ''}${lift.ctr.toFixed(2)}%`, 20, y);
+        y += 8;
+        doc.text(`CVR Lift: ${lift.cvr > 0 ? '+' : ''}${lift.cvr.toFixed(2)}%`, 20, y);
+
+        // Add charts as images
+        y += 15;
+        const charts = document.querySelectorAll('canvas');
+        let chartIndex = 0;
+        charts.forEach((canvas, index) => {
+            if (chartIndex >= 2) return; // Only add first 2 charts to fit on page
+            const imgData = canvas.toDataURL('image/png');
+            doc.addImage(imgData, 'PNG', 20, y, 170, 70);
+            y += 80;
+            chartIndex++;
+        });
+
+        doc.save(`dashboard-report-${new Date().toISOString().split('T')[0]}.pdf`);
+    }
+
+    // Event Listeners
     document.getElementById('refreshBtn').addEventListener('click', loadMetrics);
+    document.getElementById('exportCSV').addEventListener('click', exportToCSV);
+    document.getElementById('exportPDF').addEventListener('click', exportToPDF);
 
-    // Auto-refresh every 5 seconds
-    setInterval(loadMetrics, 5000);
+    // Auto-refresh every 3 seconds
+    setInterval(loadMetrics, 3000);
 
-    // Initial load
-    loadMetrics();
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeCharts();
+        loadMetrics();
+    });
 </script>
 {% endblock %}

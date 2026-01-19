@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Netflix-Style Recommender{% endblock %}</title>
+    <title>{% block title %}Rung Động{% endblock %}</title>
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,7 +14,7 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 
-    <!-- Custom Netflix CSS -->
+    <!-- Custom Rung Động CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/netflix.css') }}">
 
     <style>
@@ -31,7 +31,7 @@
             overflow-x: hidden;
         }
 
-        /* Netflix Logo */
+        /* Rung Động Logo */
         .netflix-logo {
             color: #E50914;
             font-weight: 700;
@@ -48,7 +48,7 @@
         <div class="px-8 py-4 flex items-center justify-between">
             <div class="flex items-center space-x-8">
                 <!-- Logo -->
-                <a href="/" class="netflix-logo">NETFLIX</a>
+                <a href="/" class="netflix-logo">RUNG ĐỘNG</a>
 
                 <!-- Nav Links -->
                 <div class="hidden md:flex space-x-6">
@@ -63,6 +63,16 @@
                 <div id="userInfo" class="hidden items-center space-x-2">
                     <span class="text-sm text-gray-300" id="userId"></span>
                     <span class="px-2 py-1 text-xs rounded-full" id="variantBadge"></span>
+                </div>
+
+                <!-- Subscribe Button (shown after login, before subscription) -->
+                <button id="subscribeBtn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-black px-4 py-2 rounded text-sm font-bold transition">
+                    <i class="fas fa-crown mr-2"></i>Subscribe Now
+                </button>
+
+                <!-- Subscribed Badge (shown after subscription) -->
+                <div id="subscribedBadge" class="hidden items-center px-3 py-1 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black rounded-full text-sm font-bold">
+                    <i class="fas fa-check-circle mr-1"></i>Premium
                 </div>
 
                 <!-- Login Button -->
@@ -86,7 +96,7 @@
     <!-- Login Modal -->
     <div id="loginModal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center">
         <div class="bg-gray-900 rounded-lg p-8 max-w-md w-full mx-4">
-            <h2 class="text-2xl font-bold mb-6">Login to Netflix</h2>
+            <h2 class="text-2xl font-bold mb-6">Đăng nhập Rung Động</h2>
 
             <div class="space-y-4">
                 <div>
@@ -144,6 +154,8 @@
         const closeModalBtn = document.getElementById('closeModalBtn');
         const loginSubmitBtn = document.getElementById('loginSubmitBtn');
         const userIdInput = document.getElementById('userIdInput');
+        const subscribeBtn = document.getElementById('subscribeBtn');
+        const subscribedBadge = document.getElementById('subscribedBadge');
 
         loginBtn.addEventListener('click', () => {
             loginModal.classList.remove('hidden');
@@ -186,6 +198,16 @@
                     loginBtn.classList.add('hidden');
                     logoutBtn.classList.remove('hidden');
 
+                    // Show Subscribe button (if not already subscribed)
+                    if (!data.is_subscribed) {
+                        subscribeBtn.classList.remove('hidden');
+                        subscribedBadge.classList.add('hidden');
+                    } else {
+                        subscribeBtn.classList.add('hidden');
+                        subscribedBadge.classList.remove('hidden');
+                        subscribedBadge.classList.add('flex');
+                    }
+
                     loginModal.classList.add('hidden');
                     userIdInput.value = '';
 
@@ -213,6 +235,8 @@
                 document.getElementById('userInfo').classList.remove('flex');
                 loginBtn.classList.remove('hidden');
                 logoutBtn.classList.add('hidden');
+                subscribeBtn.classList.add('hidden');
+                subscribedBadge.classList.add('hidden');
 
                 showToast('Logged out successfully', 'success');
 
@@ -222,6 +246,33 @@
                 }
             } catch (error) {
                 console.error('Logout error:', error);
+            }
+        });
+
+        // Subscribe to Premium
+        subscribeBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/subscribe', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({})
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Hide subscribe button, show subscribed badge
+                    subscribeBtn.classList.add('hidden');
+                    subscribedBadge.classList.remove('hidden');
+                    subscribedBadge.classList.add('flex');
+
+                    showToast('Welcome to Rung Động Premium!', 'success');
+                } else {
+                    showToast(data.message || 'Subscription failed', 'error');
+                }
+            } catch (error) {
+                console.error('Subscribe error:', error);
+                showToast('Subscription error', 'error');
             }
         });
 

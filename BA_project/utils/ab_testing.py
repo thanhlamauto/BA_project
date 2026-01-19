@@ -15,6 +15,7 @@ from utils.logger_service import (
     log_impression_async,
     log_click_async,
     log_conversion_async,
+    log_subscription_async,
     log_event_async
 )
 
@@ -116,3 +117,12 @@ def log_conversion(user_id, variant, movie_id, rating):
     Performance: Returns in <5ms (vs 50-100ms with blocking I/O)
     """
     return log_conversion_async(user_id, variant, movie_id, rating)
+
+
+def log_subscription(user_id, variant, movie_id):
+    """
+    Log when user subscribes to a movie - subscription event (async, non-blocking)
+
+    Performance: Returns in <5ms (vs 50-100ms with blocking I/O)
+    """
+    return log_subscription_async(user_id, variant, movie_id)

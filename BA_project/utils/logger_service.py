@@ -1,6 +1,7 @@
 """
 Asynchronous Event Logger Service
 
+Supports both CSV logging (development) and MongoDB (production).
 Implements fire-and-forget logging pattern using Python Queue and Threading.
 Events are pushed to a background worker thread for non-blocking I/O.
 
@@ -9,10 +10,18 @@ Performance: Request latency reduced from 50-100ms to <5ms
 import csv
 import queue
 import threading
-import time
 import atexit
+import os
 from pathlib import Path
 from datetime import datetime
+
+# Try to import pymongo (optional dependency)
+try:
+    from pymongo import MongoClient
+    from pymongo.errors import ConnectionFailure
+    PYMONGO_AVAILABLE = True
+except ImportError:
+    PYMONGO_AVAILABLE = False
 
 # Event queue (thread-safe)
 event_queue = queue.Queue(maxsize=10000)  # Buffer up to 10K events
@@ -21,15 +30,54 @@ event_queue = queue.Queue(maxsize=10000)  # Buffer up to 10K events
 worker_thread = None
 worker_running = False
 
-# Log directory
+# Log directory (for CSV fallback)
 LOG_DIR = Path('data/logs')
 LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+# MongoDB connection (lazy initialization)
+_mongo_client = None
+_db = None
+
+
+def get_db():
+    """
+    Get MongoDB database connection (lazy initialization).
+    Returns None if MongoDB is not available.
+    """
+    global _mongo_client, _db
+
+    if not PYMONGO_AVAILABLE:
+        return None
+
+    if _db is None:
+        try:
+            mongo_uri = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/ba_project')
+            _mongo_client = MongoClient(
+                mongo_uri,
+                maxPoolSize=10,
+                serverSelectionTimeoutMS=5000
+            )
+            # Verify connection
+            _mongo_client.admin.command('ping')
+            _db = _mongo_client.get_database()
+            print(f"[Logger] MongoDB connected: {_db.name}")
+        except Exception as e:
+            print(f"[Logger] MongoDB connection failed: {e}")
+            _db = None
+
+    return _db
+
+
+def use_mongodb():
+    """Check if MongoDB logging should be used"""
+    use_mongo = os.getenv('USE_MONGODB_LOGGING', 'false').lower() == 'true'
+    return use_mongo and PYMONGO_AVAILABLE and get_db() is not None
 
 
 def log_worker():
     """
-    Background worker that processes events from queue and writes to CSV.
-    Runs in separate thread to avoid blocking main request thread.
+    Background worker that processes events from queue.
+    Writes to MongoDB (production) or CSV (development).
     """
     global worker_running
     print("[Logger] Background worker started")
@@ -39,19 +87,60 @@ def log_worker():
             # Get event from queue (timeout to check worker_running flag)
             event = event_queue.get(timeout=1.0)
 
-            # Write event to appropriate CSV file
-            _write_event_to_csv(event)
+            # Write event to appropriate storage
+            if use_mongodb():
+                _write_event_to_mongodb(event)
+            else:
+                _write_event_to_csv(event)
 
             # Mark task as done
             event_queue.task_done()
 
         except queue.Empty:
-            # No events in queue, continue loop
             continue
         except Exception as e:
             print(f"[Logger] Error processing event: {e}")
 
     print("[Logger] Background worker stopped")
+
+
+def _write_event_to_mongodb(event):
+    """
+    Write single event to MongoDB collection.
+
+    Args:
+        event: Dictionary with event data
+    """
+    try:
+        db = get_db()
+        if db is None:
+            # Fallback to CSV if MongoDB not available
+            _write_event_to_csv(event)
+            return
+
+        event_type = event.get('event_type')
+        collection_name = f"{event_type}s"  # impressions, clicks, conversions, etc.
+
+        # Prepare document
+        document = {
+            'timestamp': datetime.fromisoformat(event['timestamp']) if isinstance(event['timestamp'], str) else event['timestamp'],
+            'user_id': event.get('user_id', ''),
+            'variant': event.get('variant', ''),
+            'movie_id': event.get('movie_id', ''),
+            'rating': event.get('rating', ''),
+            'metadata': event.get('metadata', '')
+        }
+
+        # Handle special fields for different event types
+        if event_type == 'impression' and 'movie_ids' in event:
+            document['movie_ids'] = event['movie_ids']
+
+        db[collection_name].insert_one(document)
+
+    except Exception as e:
+        print(f"[Logger] Failed to write to MongoDB: {e}")
+        # Fallback to CSV
+        _write_event_to_csv(event)
 
 
 def _write_event_to_csv(event):
@@ -96,7 +185,7 @@ def log_event_async(event_type, user_id, variant, movie_id=None, rating=None, **
     Event is queued and processed by background worker.
 
     Args:
-        event_type: 'impression', 'click', 'conversion', 'engagement', 'performance'
+        event_type: 'impression', 'click', 'conversion', 'engagement', 'performance', 'subscription'
         user_id: User identifier
         variant: 'control' or 'treatment'
         movie_id: Movie ID (optional)
@@ -145,6 +234,11 @@ def log_conversion_async(user_id, variant, movie_id, rating):
     return log_event_async('conversion', user_id, variant, movie_id=movie_id, rating=rating)
 
 
+def log_subscription_async(user_id, variant, movie_id=None):
+    """Log subscription event asynchronously"""
+    return log_event_async('subscription', user_id, variant, movie_id=movie_id or '')
+
+
 def log_engagement_async(user_id, variant, movie_id, dwell_time_ms, action='view'):
     """Log engagement event asynchronously (dwell time tracking)"""
     return log_event_async('engagement', user_id, variant, movie_id=movie_id,
@@ -172,7 +266,11 @@ def start_logger_service():
     worker_thread = threading.Thread(target=log_worker, daemon=True, name="LoggerWorker")
     worker_thread.start()
 
-    print("[Logger] Service started successfully")
+    # Log which storage backend is being used
+    if use_mongodb():
+        print("[Logger] Service started (MongoDB backend)")
+    else:
+        print("[Logger] Service started (CSV backend)")
 
 
 def stop_logger_service(timeout=5.0):

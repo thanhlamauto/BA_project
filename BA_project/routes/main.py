@@ -2,7 +2,7 @@
 Main Routes: Home page and recommendations
 """
 from flask import Blueprint, render_template, request, session, jsonify
-from utils.ab_testing import assign_variant, log_impression, log_click, log_conversion
+from utils.ab_testing import assign_variant, log_impression, log_click, log_conversion, log_subscription
 from utils.recommender import get_recommendations, dataset
 
 bp = Blueprint('main', __name__)
@@ -10,7 +10,7 @@ bp = Blueprint('main', __name__)
 
 @bp.route('/')
 def index():
-    """Home page - Netflix-style landing"""
+    """Home page - Rung Động landing"""
     return render_template('index.html')
 
 
@@ -30,11 +30,13 @@ def login():
     session['user_id'] = user_id
     session['variant'] = variant
     session['rated_movies'] = {}  # Initialize empty ratings dict
+    session['is_subscribed'] = False  # Initialize subscription status
 
     return jsonify({
         'success': True,
         'user_id': user_id,
-        'variant': variant
+        'variant': variant,
+        'is_subscribed': False
     })
 
 
@@ -128,6 +130,35 @@ def rate():
         'message': f'Rated movie {movie_id} with {rating} stars',
         'should_refresh': True,  # Signal to frontend to refresh recommendations
         'num_ratings': len(session['rated_movies'])
+    })
+
+
+@bp.route('/subscribe', methods=['POST'])
+def subscribe():
+    """Log Rung Động Premium subscription event"""
+    user_id = session.get('user_id')
+    variant = session.get('variant')
+
+    if not user_id or not variant:
+        return jsonify({'error': 'Not logged in'}), 401
+
+    # Check if already subscribed
+    if session.get('is_subscribed'):
+        return jsonify({
+            'success': False,
+            'message': 'Already subscribed to Premium'
+        }), 400
+
+    # Mark as subscribed in session
+    session['is_subscribed'] = True
+    session.modified = True
+
+    # Log subscription event (movie_id is empty for service subscription)
+    log_subscription(user_id, variant, movie_id=None)
+
+    return jsonify({
+        'success': True,
+        'message': 'Subscribed to Rung Động Premium!'
     })
 
 

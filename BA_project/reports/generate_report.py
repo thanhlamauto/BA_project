@@ -27,7 +27,7 @@ def generate_html_report():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A/B Test Report - Netflix Recommender</title>
+    <title>A/B Test Report - Rung Động</title>
     <style>
         * {{
             margin: 0;
@@ -190,7 +190,7 @@ def generate_html_report():
     <div class="container">
         <header>
             <h1>A/B Test Report</h1>
-            <p class="subtitle">Netflix-Style Recommender System</p>
+            <p class="subtitle">Rung Động - Recommender System</p>
             <p class="subtitle">Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
         </header>
 
@@ -325,7 +325,7 @@ def generate_html_report():
 
         <footer>
             <p><strong>BA Project - Business Analysis Course</strong></p>
-            <p>Netflix-Style Recommender System with A/B Testing Framework</p>
+            <p>Rung Động - Recommender System with A/B Testing Framework</p>
             <p style="margin-top: 1rem; font-size: 0.9rem; color: #999;">
                 For detailed methodology, see <a href="../docs/AB_Test_Design.md" style="color: #E50914;">AB_Test_Design.md</a>
             </p>
