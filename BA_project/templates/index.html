@@ -426,11 +426,26 @@
         const card = document.createElement('div');
         card.className = 'movie-card';
 
-        // Get poster URL from movie data (real TMDB posters!)
-        const posterUrl = movie.poster_url || `https://via.placeholder.com/300x450/1a1a1a/ffffff?text=${encodeURIComponent(movie.title.substring(0, 20))}`;
+        // Get poster URL with fallback chain
+        let posterUrl = movie.poster_url || movie.poster || '';
+        
+        // Default placeholder if no poster
+        const placeholderUrl = `https://placehold.co/300x450/1f1f1f/888888?text=${encodeURIComponent(movie.title.substring(0, 20).replace(/[^\w\s]/g, ''))}`;
+        
+        // If poster_url is empty or invalid, use placeholder
+        if (!posterUrl || posterUrl === 'N/A' || posterUrl === 'null') {
+            posterUrl = placeholderUrl;
+        }
 
         card.innerHTML = `
-            <img src="${posterUrl}" alt="${movie.title}" onerror="this.src='https://via.placeholder.com/300x450/1a1a1a/ffffff?text=No+Image'" loading="lazy">
+            <img 
+                src="${posterUrl}" 
+                alt="${movie.title}" 
+                onerror="this.onerror=null; this.src='${placeholderUrl}'" 
+                loading="lazy"
+                class="movie-poster"
+                style="background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);"
+            >
             <div class="movie-overlay">
                 <h3 class="font-bold text-sm mb-1 line-clamp-2">${movie.title}</h3>
                 <p class="text-xs text-gray-400 mb-2">${movie.genres || 'Unknown'}</p>
